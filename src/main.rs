@@ -1,6 +1,12 @@
+#![allow(unused)]
+#![allow(unused_variables)]
+#![allow(unreachable_code)]
+
+use clap::{arg, command, value_parser, Command};
 use rand::prelude::SliceRandom;
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 struct Sides {
@@ -91,7 +97,7 @@ fn print_board(board: &Vec<Vec<Tile>>) {
         }
         println!();
     }
-    println!();
+    println!("\n");
 }
 
 fn update_entropies(board: &mut Vec<Vec<Tile>>, tiles: &[Tile]) {
@@ -251,7 +257,40 @@ fn update_adjacent_tiles(board: &mut Vec<Vec<Tile>>, x: usize, y: usize) {
     }
 }
 
+fn parse_args() -> (usize, usize, usize) {
+    let matches = Command::new("MyApp")
+        .version("1.0")
+        .about("Does awesome things")
+        .arg(
+            arg!(--height <VALUE>)
+                .help("height of generated pattern")
+                .default_value("10")
+                .value_parser(value_parser!(u32).range(1..)),
+        )
+        .arg(
+            arg!(--width <VALUE>)
+                .help("width of generated pattern")
+                .default_value("10")
+                .value_parser(value_parser!(u32).range(1..)),
+        )
+        .arg(
+            arg!(--"n-iter" <VALUE>)
+                .help("how many patterns generates")
+                .default_value("1")
+                .value_parser(value_parser!(u32).range(1..)),
+        )
+        .get_matches();
+
+    let width = matches.get_one::<u32>("width").expect("required").clone() as usize;
+    let height = matches.get_one::<u32>("height").expect("required").clone() as usize;
+    let n_iter = matches.get_one::<u32>("n-iter").expect("required").clone() as usize;
+
+    (width, height, n_iter)
+}
+
 fn main() {
+    let (width, height, n_iter) = parse_args();
+
     let tiles = [
         Tile::new(' ', (0, 0, 0, 0)),
         Tile::new('╠', (1, 1, 1, 0)),
@@ -283,39 +322,43 @@ fn main() {
     ];
 
     // SET SIZE UNICODE WAVE FUNCTION COLLAPSE SHAPE
-    const SHAPE: (usize, usize) = (15, 50);
+    let shape = (height, width);
 
-    let mut board = vec![vec![Tile::new('-', (0, 0, 0, 0)); SHAPE.1]; SHAPE.0];
+    for iter in 0..n_iter {
+        let mut board = vec![vec![Tile::new('-', (0, 0, 0, 0)); shape.1]; shape.0];
 
-    let time = Instant::now();
-    for i in 0..SHAPE.0 * SHAPE.1 {
-        if i != 0 {
-            update_entropies(&mut board, &tiles);
+        let time = Instant::now();
+        for i in 0..shape.0 * shape.1 {
+            if i != 0 {
+                update_entropies(&mut board, &tiles);
+                
+                let (rand_x, rand_y) = find_random_lowest_entropy_index(&board);
+                let chosen_tile = board[rand_x][rand_y]
+                    .allowed
+                    .choose(&mut rand::thread_rng())
+                    .unwrap()
+                    .clone();
+                board[rand_x][rand_y] = chosen_tile.clone();
 
-            let (rand_x, rand_y) = find_random_lowest_entropy_index(&board);
+                println!("chosen: {}, at: {:?}", chosen_tile.tile, (rand_x, rand_y));
+                update_adjacent_tiles(&mut board, rand_x, rand_y);
 
-            let chosen_tile = board[rand_x][rand_y]
-                .allowed
-                .choose(&mut rand::thread_rng())
-                .unwrap()
-                .clone();
-            board[rand_x][rand_y] = chosen_tile.clone();
+                print_board(&board);
+            } else {
+                let (rand_x, rand_y) = find_random_lowest_entropy_index(&board);
+                board[rand_x][rand_y] = tiles.choose(&mut rand::thread_rng()).unwrap().clone();
+                update_adjacent_tiles(&mut board, rand_x, rand_y);
+                print_board(&board);
+            }
+        }
 
-            println!("chosen: {}, at: {:?}", chosen_tile.tile, (rand_x, rand_y));
-            update_adjacent_tiles(&mut board, rand_x, rand_y);
-
-            print_board(&board);
-        } else {
-            let (rand_x, rand_y) = find_random_lowest_entropy_index(&board);
-            board[rand_x][rand_y] = tiles.choose(&mut rand::thread_rng()).unwrap().clone();
-            update_adjacent_tiles(&mut board, rand_x, rand_y);
-            print_board(&board);
+        println!(
+            "UWFC size of {:?} took {} seconds",
+            shape,
+            time.elapsed().as_secs_f32()
+        );
+        if iter < n_iter - 1 {
+            thread::sleep(Duration::from_secs(3));
         }
     }
-
-    println!(
-        "UWFC size of {:?} took {} seconds",
-        SHAPE,
-        time.elapsed().as_secs_f32()
-    );
 }
