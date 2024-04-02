@@ -254,9 +254,9 @@ fn update_adjacent_tiles(board: &mut Vec<Vec<Tile>>, x: usize, y: usize) {
 }
 
 fn parse_args() -> (usize, usize, usize) {
-    let matches = Command::new("MyApp")
+    let matches = Command::new("uwfc")
         .version("1.0")
-        .about("Does awesome things")
+        .about("Create pattern with wave function collapse.")
         .arg(
             arg!(--height <VALUE>)
                 .help("height of generated pattern")
