@@ -1,8 +1,4 @@
-#![allow(unused)]
-#![allow(unused_variables)]
-#![allow(unreachable_code)]
-
-use clap::{arg, command, value_parser, Command};
+use clap::{arg, value_parser, Command};
 use rand::prelude::SliceRandom;
 use std::collections::{HashMap, HashSet};
 use std::thread;
@@ -331,7 +327,7 @@ fn main() {
         for i in 0..shape.0 * shape.1 {
             if i != 0 {
                 update_entropies(&mut board, &tiles);
-                
+
                 let (rand_x, rand_y) = find_random_lowest_entropy_index(&board);
                 let chosen_tile = board[rand_x][rand_y]
                     .allowed
